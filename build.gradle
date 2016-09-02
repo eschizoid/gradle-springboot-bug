@@ -1,0 +1,119 @@
+buildscript {
+    dependencies {
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
+        classpath "net.serenity-bdd:serenity-gradle-plugin:${serenity_version}"
+    }
+}
+
+plugins {
+    id 'java'
+}
+
+apply plugin: 'spring-boot'
+apply plugin: 'net.serenity-bdd.aggregator'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url 'http://repository.opendatagroup.com/maven'
+    }
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+springBoot {
+    mainClass = 'org.datascienceengine.Application'
+    applyExcludeRules = true
+}
+
+sourceSets {
+    integrationTest {
+        java {
+            srcDir 'src/integration-test/java'
+        }
+        resources {
+            srcDir 'src/integration-test/resources'
+        }
+    }
+}
+
+configurations.compile {
+    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
+    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    exclude group: 'org.springframework.boot', module: 'logback-classic'
+}
+
+dependencies {
+
+    compile("org.apache.kafka:kafka_${scala_version}:${kafka_version}") {
+        exclude group: 'com.sun.jdmk'
+        exclude group: 'com.sun.jmx'
+        exclude group: 'javax.jms'
+        exclude group: 'log4j'
+        exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+    }
+
+    compile("biz.paluch.logging:logstash-gelf:${gelf_version}")
+
+
+    compile("org.springframework.boot:spring-boot-starter-web:${spring_boot_version}") {
+        exclude module: 'spring-boot-starter-tomcat'
+        exclude module: 'spring-boot-starter-logging'
+    }
+    compile("org.springframework.boot:spring-boot-starter:${spring_boot_version}") {
+        exclude module: 'spring-boot-starter-logging'
+    }
+    compile("org.springframework.boot:spring-boot-starter-log4j2:${spring_boot_version}")
+    compile("org.springframework.boot:spring-boot-starter-jetty:${spring_boot_version}") {
+        exclude module: 'spring-boot-starter-logging'
+    }
+    compile("org.springframework.boot:spring-boot-starter-actuator:${spring_boot_version}") {
+        exclude module: 'spring-boot-starter-logging'
+    }
+
+    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
+    compile "org.jboss.logging:jboss-logging:${jboss_logging_version}"
+    compile "org.apache.logging.log4j:log4j-1.2-api:${log4j_version}"
+
+    compile("org.apache.httpcomponents:httpclient:${http_client_version}")
+    compile "com.google.guava:guava:${guava_version}",
+            "uk.com.robust-it:cloning:${cloning_version}",
+            "com.opendatagroup:hadrian:${hadrian_version}",
+            "com.typesafe.akka:akka-actor_${scala_version}:${akka_version}",
+            "org.apache.commons:commons-collections4:${commmons_collection_version}",
+            "commons-io:commons-io:${commons_io_version}",
+            "org.elasticsearch:elasticsearch:${elasticsearch_version}",
+            "com.vividsolutions:jts:${jts_version}",
+            "org.rocksdb:rocksdbjni:${rocksdb_version}"
+
+    testCompile "com.typesafe.akka:akka-testkit_${scala_version}:${akka_version}",
+            "org.springframework.boot:spring-boot-starter-test:${spring_boot_version}"
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+allprojects {
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << '-Xlint:unchecked' <<
+                    '-Xdiags:verbose' <<
+                    '-Werror'
+        }
+    }
+}
+
+task integrationTest(type: Test) {
+    systemProperties System.getProperties()
+    testClassesDir = sourceSets.integrationTest.output.classesDir
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    testLogging.showStandardStreams = true
+}
+
+gradle.startParameter.continueOnFailure = true
+
+//Ensure that the HTML reports of unit and integration tests are written to different directories.
+tasks.withType(Test) {
+    reports.html.destination = file("${reporting.baseDir}/${name}")
+}

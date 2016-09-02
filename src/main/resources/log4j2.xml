@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+
+    <Properties>
+        <Property name="LOG_PATTERN">%date{dd MMM yyyy HH:mm:ss,SSS} %-5level ${PID:- } --- %thread %logger{1.} : %message%n</Property>
+        <Property name="org.uptake.datascienceengine.logging.level">debug</Property>
+        <Property name="org.uptake.datascienceengine.graylog.host">127.0.0.1</Property>
+        <Property name="org.uptake.datascienceengine.graylog.port">12201</Property>
+        <Property name="org.uptake.datascienceengine.app.name">DSE</Property>
+        <Property name="org.uptake.datascienceengine.app.id">012345</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Convert this to a rolling file appender -->
+        <RollingFile name="File" fileName="/var/log/uptake/datascience-engine/dse.log"
+                     filePattern="/var/log/uptake/datascience-engine/dse.%date.log.gz">
+            <PatternLayout>
+                <Pattern>${LOG_PATTERN}</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="5 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+        <Gelf name="GelfLogger" host="udp:${sys:org.uptake.datascienceengine.graylog.host}"
+              port="${sys:org.uptake.datascienceengine.graylog.port}" version="1.1" extractStackTrace="true"
+              filterStackTrace="true" mdcProfiling="true" includeFullMdc="true" maximumMessageSize="8192"
+              originHost="${sys:org.uptake.datascienceengine.app.name}.${sys:org.uptake.datascienceengine.app.id}">
+            <Field name="timestamp" pattern="%d{dd MMM yyyy HH:mm:ss,SSS}" />
+            <Field name="level" pattern="%level" />
+        </Gelf>
+    </Appenders>
+    <Loggers>
+        <logger name="org.uptake" level="${sys:org.uptake.datascienceengine.logging.level}"/>
+        <Root level="warn">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+            <AppenderRef ref="GelfLogger"/>
+        </Root>
+    </Loggers>
+</Configuration>
